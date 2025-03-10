@@ -6,13 +6,19 @@ fn main() {
     // Get command-line arguments
     let args: Vec<String> = env::args().collect();
 
-    // Ensure the user provided exactly one argument (excluding program name)
-    if args.len() != 2 {
-        eprintln!("Usage: {} <path-to-C-file>", args[0]);
+    // Ensure the user provides at least one argument (excluding program name)
+    if args.len() < 3 {
+        eprintln!("Usage: {} <option> <path-to-C-file>", args[0]);
+        eprintln!("Options:");
+        eprintln!("  --lex       Perform lexical analysis");
+        eprintln!("  --parse     Perform parsing");
+        eprintln!("  --codegen   Perform code generation");
+        eprintln!("  -s          Generate an assembly file");
         process::exit(1);
     }
 
-    let path = &args[1];
+    let option = &args[1];
+    let path = &args[2];
 
     // Ensure input has a .c extension
     if !path.ends_with(".c") {
@@ -22,21 +28,43 @@ fn main() {
 
     // Remove the ".c" extension properly
     let new_name = match path.strip_suffix(".c") {
-        Some(name) => name, // Successfully stripped ".c"
+        Some(name) => name,
         None => {
             eprintln!("Error: Could not strip '.c' from filename.");
             process::exit(1);
         }
     };
 
-    // Attempt to create the file
-    match File::create(new_name) {
-        Ok(_) => {
-            println!("Created file: {}", new_name);
+    // Handle different options
+    match option.as_str() {
+        "--lex" => {
+            println!("Performing lexical analysis on {}", path);
             process::exit(0);
         }
-        Err(_) => {
-            eprintln!("Error: Failed to create file '{}'", new_name);
+        "--parse" => {
+            println!("Performing parsing on {}", path);
+            process::exit(0);
+        }
+        "--codegen" => {
+            println!("Performing code generation on {}", path);
+            process::exit(0);
+        }
+        "-s" => {
+            let asm_file = format!("{}.s", new_name);
+            match File::create(&asm_file) {
+                Ok(_) => {
+                    println!("Generated assembly file: {}", asm_file);
+                    process::exit(0);
+                }
+                Err(_) => {
+                    eprintln!("Error: Failed to create assembly file '{}'", asm_file);
+                    process::exit(1);
+                }
+            }
+        }
+        _ => {
+            eprintln!("Error: Unknown option '{}'", option);
+            eprintln!("Use --lex, --parse, --codegen, or -s.");
             process::exit(1);
         }
     }
