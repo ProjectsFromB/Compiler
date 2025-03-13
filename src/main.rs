@@ -17,33 +17,48 @@ enum Token {
     Semicolon,
 }
 
-fn lexer(file_path: &str) {
+fn lexer(file_path: &str) -> Result<(), String> {
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => {
-            eprintln!("Error: Could not open file '{}'.", file_path);
-            process::exit(1);
+            return Err(format!("Error: Could not open file '{}'.", file_path));
         }
     };
-    
+
     let mut contents = String::new();
     if let Err(_) = file.read_to_string(&mut contents) {
-        eprintln!("Error: Could not read file '{}'.", file_path);
-        process::exit(1);
+        return Err(format!("Error: Could not read file '{}'.", file_path));
     }
 
     let mut tokens = Vec::new();
     let mut chars = contents.chars().peekable();
-    
+
     while let Some(&c) = chars.peek() {
         match c {
-            ' ' | '\n' | '\t' => { chars.next(); }, // Ignore whitespace
-            '(' => { tokens.push(Token::OpenParenthesis); chars.next(); }
-            ')' => { tokens.push(Token::CloseParenthesis); chars.next(); }
-            '{' => { tokens.push(Token::OpenBrace); chars.next(); }
-            '}' => { tokens.push(Token::CloseBrace); chars.next(); }
-            ';' => { tokens.push(Token::Semicolon); chars.next(); }
-            '0'..='9' => { 
+            ' ' | '\n' | '\t' => {
+                chars.next();
+            } // Ignore whitespace
+            '(' => {
+                tokens.push(Token::OpenParenthesis);
+                chars.next();
+            }
+            ')' => {
+                tokens.push(Token::CloseParenthesis);
+                chars.next();
+            }
+            '{' => {
+                tokens.push(Token::OpenBrace);
+                chars.next();
+            }
+            '}' => {
+                tokens.push(Token::CloseBrace);
+                chars.next();
+            }
+            ';' => {
+                tokens.push(Token::Semicolon);
+                chars.next();
+            }
+            '0'..='9' => {
                 let mut num = String::new();
                 while let Some(&d) = chars.peek() {
                     if d.is_numeric() {
@@ -65,6 +80,23 @@ fn lexer(file_path: &str) {
                         break;
                     }
                 }
+
+                // Debugging: Print each identifier being checked
+                eprintln!("DEBUG: Found identifier '{}'", ident);
+
+                // Check for invalid identifiers
+                if ident.chars().next().unwrap().is_numeric() {
+                    return Err(format!("Lexical Error: Identifiers cannot start with a number: '{}'", ident));
+                }
+
+                if ident == "_" {
+                    return Err(format!("Lexical Error: Standalone underscore '_' is not a valid identifier."));
+                }
+
+                if ident.chars().any(|ch| !(ch.is_alphanumeric() || ch == '_')) {
+                    return Err(format!("Lexical Error: Invalid identifier '{}'", ident));
+                }
+
                 match ident.as_str() {
                     "int" => tokens.push(Token::IntKeyword),
                     "void" => tokens.push(Token::VoidKeyword),
@@ -72,13 +104,42 @@ fn lexer(file_path: &str) {
                     _ => tokens.push(Token::Identifier(ident)),
                 }
             }
-            _ => { chars.next(); } // Ignore unknown characters
+            '/' => {
+                chars.next();
+                if let Some(&next) = chars.peek() {
+                    if next == '/' {
+                        // Single-line comment, consume until newline
+                        while let Some(&c) = chars.peek() {
+                            if c == '\n' {
+                                break;
+                            }
+                            chars.next();
+                        }
+                    } else if next == '*' {
+                        // Multi-line comment, consume until `*/`
+                        chars.next(); // Consume '*'
+                        while let Some(_) = chars.peek() {
+                            if chars.next() == Some('*') && chars.peek() == Some(&'/') {
+                                chars.next(); // Consume '/'
+                                break;
+                            }
+                        }
+                    } else {
+                        return Err("Lexical Error: Unhandled token '/'. Implement operator support.".to_string());
+                    }
+                }
+            }
+            _ => {
+                return Err(format!("Lexical Error: Invalid character '{}'", c));
+            }
         }
     }
 
     for token in tokens {
         println!("{:?}", token);
     }
+
+    Ok(())
 }
 
 fn main() {
@@ -118,7 +179,10 @@ fn main() {
         Some(opt) => match opt.as_str() {
             "--lex" => {
                 println!("Performing lexical analysis on {}", path);
-                lexer(path);
+                if let Err(e) = lexer(path) {
+                    eprintln!("{}", e);
+                    process::exit(1);  // Ensure failure is indicated by exit code 1
+                }
                 process::exit(0);
             }
             "--parse" => {
