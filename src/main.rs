@@ -63,6 +63,7 @@ fn lexer(file_path: &str) -> Result<(), String> {
                 tokens.push(Token::Semicolon);
                 chars.next();
             }
+           ///////////////////////
             '0'..='9' => {
                 let mut num = String::new();
                 while let Some(&d) = chars.peek() {
@@ -73,8 +74,14 @@ fn lexer(file_path: &str) -> Result<(), String> {
                         break;
                     }
                 }
+                if let Some(&next) = chars.peek() {
+                    if next.is_alphabetic() || next == '_' {
+                        return Err(format!("Lexical Error: Identifiers cannot start with a number: '{}{}'", num, next));
+        }
+    }
                 tokens.push(Token::Constant(num)); // Store numeric constants
             }
+            //////////////////////////////
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut ident = String::new();
                 while let Some(&d) = chars.peek() {
