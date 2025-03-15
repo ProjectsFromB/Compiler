@@ -1,43 +1,48 @@
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
-use std::process;
+use std::env; // Import standard library module for handling command-line arguments
+use std::fs::File; // Import module to handle file operations
+use std::io::{self, Read}; // Import modules for input/output operations
+use std::process; // Import module to handle process termination
 
+// Define an enumeration for different types of tokens recognized by the lexer
 #[derive(Debug)]
 enum Token {
-    Identifier(String),
-    Constant(String),
-    IntKeyword,
-    VoidKeyword,
-    ReturnKeyword,
-    OpenParenthesis,
-    CloseParenthesis,
-    OpenBrace,
-    CloseBrace,
-    Semicolon,
+    Identifier(String), // Represents variable/function names
+    Constant(String), // Represents numeric constants
+    IntKeyword, // 'int' keyword
+    VoidKeyword, // 'void' keyword
+    ReturnKeyword, // 'return' keyword
+    OpenParenthesis, // '('
+    CloseParenthesis, // ')'
+    OpenBrace, // '{'
+    CloseBrace, // '}'
+    Semicolon, // ';'
 }
 
+// Function to perform lexical analysis on a given file
 fn lexer(file_path: &str) -> Result<(), String> {
+    // Try to open the specified file
     let mut file = match File::open(file_path) {
-        Ok(file) => file,
+        Ok(file) => file, // File opened successfully
         Err(_) => {
-            return Err(format!("Error: Could not open file '{}'.", file_path));
+            return Err(format!("Error: Could not open file '{}'.", file_path)); // Return an error message
         }
     };
 
-    let mut contents = String::new();
+    let mut contents = String::new(); // Create a mutable string to store file contents
+    // Read file contents into the string
     if let Err(_) = file.read_to_string(&mut contents) {
-        return Err(format!("Error: Could not read file '{}'.", file_path));
+        return Err(format!("Error: Could not read file '{}'.", file_path)); // Return an error message
     }
 
-    let mut tokens = Vec::new();
-    let mut chars = contents.chars().peekable();
+    let mut tokens = Vec::new(); // Create a vector to store identified tokens
+    let mut chars = contents.chars().peekable(); // Convert file content into an iterator over characters
 
+    // Iterate through each character in the file
     while let Some(&c) = chars.peek() {
         match c {
             ' ' | '\n' | '\t' => {
-                chars.next();
-            } // Ignore whitespace
+                chars.next(); // Ignore whitespace characters
+            }
             '(' => {
                 tokens.push(Token::OpenParenthesis);
                 chars.next();
@@ -68,7 +73,7 @@ fn lexer(file_path: &str) -> Result<(), String> {
                         break;
                     }
                 }
-                tokens.push(Token::Constant(num));
+                tokens.push(Token::Constant(num)); // Store numeric constants
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut ident = String::new();
@@ -80,23 +85,21 @@ fn lexer(file_path: &str) -> Result<(), String> {
                         break;
                     }
                 }
-
-                // Debugging: Print each identifier being checked
+                
                 eprintln!("DEBUG: Found identifier '{}'", ident);
-
-                // Check for invalid identifiers
+                
                 if ident.chars().next().unwrap().is_numeric() {
                     return Err(format!("Lexical Error: Identifiers cannot start with a number: '{}'", ident));
                 }
-
+                
                 if ident == "_" {
                     return Err(format!("Lexical Error: Standalone underscore '_' is not a valid identifier."));
                 }
-
+                
                 if ident.chars().any(|ch| !(ch.is_alphanumeric() || ch == '_')) {
                     return Err(format!("Lexical Error: Invalid identifier '{}'", ident));
                 }
-
+                
                 match ident.as_str() {
                     "int" => tokens.push(Token::IntKeyword),
                     "void" => tokens.push(Token::VoidKeyword),
@@ -108,7 +111,6 @@ fn lexer(file_path: &str) -> Result<(), String> {
                 chars.next();
                 if let Some(&next) = chars.peek() {
                     if next == '/' {
-                        // Single-line comment, consume until newline
                         while let Some(&c) = chars.peek() {
                             if c == '\n' {
                                 break;
@@ -116,7 +118,6 @@ fn lexer(file_path: &str) -> Result<(), String> {
                             chars.next();
                         }
                     } else if next == '*' {
-                        // Multi-line comment, consume until `*/`
                         chars.next(); // Consume '*'
                         while let Some(_) = chars.peek() {
                             if chars.next() == Some('*') && chars.peek() == Some(&'/') {
@@ -143,7 +144,7 @@ fn lexer(file_path: &str) -> Result<(), String> {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect(); // Collect command-line arguments
 
     if args.len() < 2 {
         eprintln!("Usage: {} [option] <path-to-C-file>", args[0]);
@@ -181,7 +182,7 @@ fn main() {
                 println!("Performing lexical analysis on {}", path);
                 if let Err(e) = lexer(path) {
                     eprintln!("{}", e);
-                    process::exit(1);  // Ensure failure is indicated by exit code 1
+                    process::exit(1);
                 }
                 process::exit(0);
             }
@@ -209,7 +210,6 @@ fn main() {
             }
             _ => {
                 eprintln!("Error: Unknown option '{}'", opt);
-                eprintln!("Use --lex, --parse, --codegen, or -s.");
                 process::exit(1);
             }
         },
