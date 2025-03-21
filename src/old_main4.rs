@@ -44,97 +44,92 @@ fn lexer(file_path: &str) -> Result<(), String> {
                 chars.next(); // Ignore whitespace characters
             }
             '(' => {
-                tokens.push(Token::OpenParenthesis); // Recognize opening parenthesis
-                chars.next(); // Consume the character
+                tokens.push(Token::OpenParenthesis);
+                chars.next();
             }
             ')' => {
-                tokens.push(Token::CloseParenthesis); // Recognize closing parenthesis
-                chars.next(); // Consume the character
+                tokens.push(Token::CloseParenthesis);
+                chars.next();
             }
             '{' => {
-                tokens.push(Token::OpenBrace); // Recognize opening brace
-                chars.next(); // Consume the character
+                tokens.push(Token::OpenBrace);
+                chars.next();
             }
             '}' => {
-                tokens.push(Token::CloseBrace); // Recognize closing brace
-                chars.next(); // Consume the character
+                tokens.push(Token::CloseBrace);
+                chars.next();
             }
             ';' => {
-                tokens.push(Token::Semicolon); // Recognize semicolon
-                chars.next(); // Consume the character
+                tokens.push(Token::Semicolon);
+                chars.next();
             }
-            ///////////////////////
+           ///////////////////////
             '0'..='9' => {
-                let mut num = String::new(); // Create a string to hold numeric constant
+                let mut num = String::new();
                 while let Some(&d) = chars.peek() {
                     if d.is_numeric() {
-                        num.push(d); // Add digit to the number string
-                        chars.next(); // Consume the character
+                        num.push(d);
+                        chars.next();
                     } else {
-                        break; // Break if the character is no longer numeric
+                        break;
                     }
                 }
-                // Ensure the number is not followed by an identifier
                 if let Some(&next) = chars.peek() {
                     if next.is_alphabetic() || next == '_' {
                         return Err(format!("Lexical Error: Identifiers cannot start with a number: '{}{}'", num, next));
-                    }
-                }
+        }
+    }
                 tokens.push(Token::Constant(num)); // Store numeric constants
             }
             //////////////////////////////
             'a'..='z' | 'A'..='Z' | '_' => {
-                let mut ident = String::new(); // Create a string to hold identifier
+                let mut ident = String::new();
                 while let Some(&d) = chars.peek() {
                     if d.is_alphanumeric() || d == '_' {
-                        ident.push(d); // Add character to the identifier string
-                        chars.next(); // Consume the character
+                        ident.push(d);
+                        chars.next();
                     } else {
-                        break; // Break if the character is no longer part of an identifier
+                        break;
                     }
                 }
-
+                
                 eprintln!("DEBUG: Found identifier '{}'", ident);
-
-                // Check if the identifier starts with a number
+                
                 if ident.chars().next().unwrap().is_numeric() {
                     return Err(format!("Lexical Error: Identifiers cannot start with a number: '{}'", ident));
                 }
-
-                // Check if the identifier is just an underscore
+                
                 if ident == "_" {
                     return Err(format!("Lexical Error: Standalone underscore '_' is not a valid identifier."));
                 }
-
-                // Check if the identifier contains invalid characters
+                
                 if ident.chars().any(|ch| !(ch.is_alphanumeric() || ch == '_')) {
                     return Err(format!("Lexical Error: Invalid identifier '{}'", ident));
                 }
-
-                // Match known keywords or treat as a generic identifier
+                
                 match ident.as_str() {
-                    "int" => tokens.push(Token::IntKeyword), // Recognize 'int' keyword
-                    "void" => tokens.push(Token::VoidKeyword), // Recognize 'void' keyword
-                    "return" => tokens.push(Token::ReturnKeyword), // Recognize 'return' keyword
-                    _ => tokens.push(Token::Identifier(ident)), // Otherwise, it's a generic identifier
+                    "int" => tokens.push(Token::IntKeyword),
+                    "void" => tokens.push(Token::VoidKeyword),
+                    "return" => tokens.push(Token::ReturnKeyword),
+                    _ => tokens.push(Token::Identifier(ident)),
                 }
             }
             '/' => {
-                chars.next(); // Consume the '/' character
+                chars.next();
                 if let Some(&next) = chars.peek() {
                     if next == '/' {
                         while let Some(&c) = chars.peek() {
-                            if c == '\n' { // End of single-line comment
+                            if c == '\n' {
                                 break;
                             }
-                            chars.next(); // Consume the character
+                            chars.next();
                         }
                     } else if next == '*' {
                         chars.next(); // Consume '*'
                         while let Some(_) = chars.peek() {
                             if chars.next() == Some('*') && chars.peek() == Some(&'/') {
                                 chars.next(); // Consume '/'
-                                break; // End of multi-line comment
+                                break;
                             }
                         }
                     } else {
@@ -143,12 +138,11 @@ fn lexer(file_path: &str) -> Result<(), String> {
                 }
             }
             _ => {
-                return Err(format!("Lexical Error: Invalid character '{}'", c)); // Handle invalid characters
+                return Err(format!("Lexical Error: Invalid character '{}'", c));
             }
         }
     }
 
-    // Print the identified tokens
     for token in tokens {
         println!("{:?}", token);
     }
@@ -159,7 +153,6 @@ fn lexer(file_path: &str) -> Result<(), String> {
 fn main() {
     let args: Vec<String> = env::args().collect(); // Collect command-line arguments
 
-    // Ensure the user provides at least one argument (the path to the C file)
     if args.len() < 2 {
         eprintln!("Usage: {} [option] <path-to-C-file>", args[0]);
         eprintln!("Options:");
@@ -167,19 +160,17 @@ fn main() {
         eprintln!("  --parse     Perform parsing");
         eprintln!("  --codegen   Perform code generation");
         eprintln!("  -s          Generate an assembly file");
-        process::exit(1); // Exit if the arguments are invalid
+        process::exit(1);
     }
 
     let mut path_index = 1;
     let mut option: Option<&String> = None;
 
-    // Check if the first argument is an option
     if args[1].starts_with('-') {
         option = Some(&args[1]);
-        path_index = 2; // The path to the C file will be the next argument
+        path_index = 2;
     }
 
-    // Ensure the path to the C file is provided
     if path_index >= args.len() {
         eprintln!("Error: Missing path to C file.");
         process::exit(1);
@@ -187,51 +178,49 @@ fn main() {
 
     let path = &args[path_index];
 
-    // Ensure the file has a .c extension
     if !path.ends_with(".c") {
         eprintln!("Error: The file must have a .c extension.");
         process::exit(1);
     }
 
-    // Handle the different options passed in the command line
     match option {
         Some(opt) => match opt.as_str() {
             "--lex" => {
                 println!("Performing lexical analysis on {}", path);
                 if let Err(e) = lexer(path) {
-                    eprintln!("{}", e); // Print error if lexical analysis fails
-                    process::exit(1); // Exit with an error code
+                    eprintln!("{}", e);
+                    process::exit(1);
                 }
-                process::exit(0); // Exit successfully
+                process::exit(0);
             }
             "--parse" => {
                 println!("Performing parsing on {}", path);
-                process::exit(0); // Exit after parsing (not yet implemented)
+                process::exit(0);
             }
             "--codegen" => {
                 println!("Performing code generation on {}", path);
-                process::exit(0); // Exit after code generation (not yet implemented)
+                process::exit(0);
             }
             "-s" => {
-                let new_name = path.trim_end_matches(".c"); // Trim the .c extension
-                let asm_file = format!("{}.s", new_name); // Generate the assembly file name
+                let new_name = path.trim_end_matches(".c");
+                let asm_file = format!("{}.s", new_name);
                 match File::create(&asm_file) {
                     Ok(_) => {
-                        println!("Generated assembly file: {}", asm_file); // Successfully created assembly file
-                        process::exit(0); // Exit successfully
+                        println!("Generated assembly file: {}", asm_file);
+                        process::exit(0);
                     }
                     Err(_) => {
-                        eprintln!("Error: Failed to create assembly file '{}'", asm_file); // Handle failure
-                        process::exit(1); // Exit with error code
+                        eprintln!("Error: Failed to create assembly file '{}'", asm_file);
+                        process::exit(1);
                     }
                 }
             }
             _ => {
-                eprintln!("Error: Unknown option '{}'", opt); // Handle unknown options
-                process::exit(1); // Exit with error code
+                eprintln!("Error: Unknown option '{}'", opt);
+                process::exit(1);
             }
         },
-        None => {} // No option provided, proceed to default behavior
+        None => {}
     }
 }
 
